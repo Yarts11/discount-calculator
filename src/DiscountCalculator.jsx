@@ -21,6 +21,8 @@ function DiscountCalculator() {
   ]);
   const [promoCode, setPromoCode] = useState("");
   const [customDiscount, setCustomDiscount] = useState(0);
+  // Флаг: начислять ли НДС (true — с НДС, false — без НДС)
+  const [withVat, setWithVat] = useState(true);
   // Признак того, что пользователь нажал «Рассчитать»
   // До первого нажатия результаты не показываем
   const [calculated, setCalculated] = useState(false);
@@ -57,6 +59,12 @@ function DiscountCalculator() {
   function handleCustomDiscountChange(e) {
     setCustomDiscount(parseInt(e.target.value, 10));
     setCalculated(false);
+  }
+
+  // Переключение «с НДС / без НДС»
+  function handleVatChange(value) {
+    setWithVat(value);
+    setCalculated(false); // Режим изменился — результаты устарели
   }
 
   function handleAddItem() {
@@ -98,6 +106,7 @@ function DiscountCalculator() {
     setItems([{ id: Date.now(), price: "", category: "electronics" }]);
     setPromoCode("");
     setCustomDiscount(0);
+    setWithVat(true);
     setCalculated(false);
     setError("");
   }
@@ -116,7 +125,7 @@ function DiscountCalculator() {
     
     const discountAmount = calculated ? numPrice * (discountPercent / 100) : 0;
     const priceAfterDiscount = calculated ? numPrice - discountAmount : 0;
-    const vatAmount = calculated ? priceAfterDiscount * VAT_RATE : 0;
+    const vatAmount = calculated && withVat ? priceAfterDiscount * VAT_RATE : 0;
     const total = calculated ? priceAfterDiscount + vatAmount : 0;
 
     return {
@@ -231,6 +240,31 @@ function DiscountCalculator() {
         />
       </div>
 
+      {/* Переключатель НДС */}
+      <div className="field">
+        <span className="field__label">НДС</span>
+        <div style={{ display: "flex", gap: "16px" }}>
+          <label style={{ cursor: "pointer" }}>
+            <input
+              type="radio"
+              name="vat"
+              checked={withVat}
+              onChange={() => handleVatChange(true)}
+            />{" "}
+            С НДС ({VAT_RATE * 100}%)
+          </label>
+          <label style={{ cursor: "pointer" }}>
+            <input
+              type="radio"
+              name="vat"
+              checked={!withVat}
+              onChange={() => handleVatChange(false)}
+            />{" "}
+            Без НДС
+          </label>
+        </div>
+      </div>
+
       {/* Кнопки */}
       <div className="actions">
         <button type="button" className="btn btn--primary" onClick={handleCalculate}>
@@ -257,10 +291,12 @@ function DiscountCalculator() {
                   −{formatRub(totalDiscountAmount)} ₽
                 </td>
               </tr>
-              <tr>
-                <td>НДС (22%)</td>
-                <td className="results__value">+{formatRub(totalVatAmount)} ₽</td>
-              </tr>
+              {withVat && (
+                <tr>
+                  <td>НДС (22%)</td>
+                  <td className="results__value">+{formatRub(totalVatAmount)} ₽</td>
+                </tr>
+              )}
               <tr className="results__row--total">
                 <td>Итого к оплате</td>
                 <td className="results__value">{formatRub(finalTotal)} ₽</td>
