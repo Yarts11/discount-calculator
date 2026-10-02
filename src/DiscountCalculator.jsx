@@ -19,6 +19,7 @@ function DiscountCalculator() {
   const [items, setItems] = useState([
     { id: Date.now(), price: "", category: "electronics" }
   ]);
+  const [promoCode, setPromoCode] = useState("");
   // Признак того, что пользователь нажал «Рассчитать»
   // До первого нажатия результаты не показываем
   const [calculated, setCalculated] = useState(false);
@@ -41,6 +42,11 @@ function DiscountCalculator() {
   function handleCategoryChange(id, catId) {
     setItems(items.map(item => item.id === id ? { ...item, category: catId } : item));
     setCalculated(false); // Категория изменилась — результаты устарели
+  }
+
+  function handlePromoChange(e) {
+    setPromoCode(e.target.value);
+    setCalculated(false);
   }
 
   function handleAddItem() {
@@ -80,15 +86,20 @@ function DiscountCalculator() {
   // Сброс формы
   function handleReset() {
     setItems([{ id: Date.now(), price: "", category: "electronics" }]);
+    setPromoCode("");
     setCalculated(false);
     setError("");
   }
 
   // --- Вычисления ---
+  const isPromoValid = promoCode.trim() === "WELCOME10";
+  const promoDiscount = isPromoValid ? 10 : 0;
+
   const calculatedItems = items.map(item => {
     const selectedCategory = CATEGORIES.find((c) => c.id === item.category);
     const numPrice = parseFloat(item.price) || 0;
-    const discountPercent = selectedCategory ? selectedCategory.discount : 0;
+    const categoryDiscountPercent = selectedCategory ? selectedCategory.discount : 0;
+    const discountPercent = categoryDiscountPercent + promoDiscount;
     const discountAmount = calculated ? numPrice * (discountPercent / 100) : 0;
     const priceAfterDiscount = calculated ? numPrice - discountAmount : 0;
     const vatAmount = calculated ? priceAfterDiscount * VAT_RATE : 0;
@@ -107,7 +118,7 @@ function DiscountCalculator() {
   const totalVatAmount = calculatedItems.reduce((sum, item) => sum + item.vatAmount, 0);
   const finalTotal = calculatedItems.reduce((sum, item) => sum + item.total, 0);
 
-  // Вспомогательная функция: форматирование в рублей
+  // Вспомогательная функция: форматирование в рублях
   function formatRub(value) {
     return value.toLocaleString("ru-RU", {
       minimumFractionDigits: 2,
@@ -122,7 +133,7 @@ function DiscountCalculator() {
 
       {items.map((item, index) => (
         <div key={item.id} className="item-row" style={{ borderBottom: "1px dashed #e5e7eb", paddingBottom: "16px", marginBottom: "16px" }}>
-          <div style={{ display: "flex", justifycontent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span className="field__label">Товар №{index + 1}</span>
             {items.length > 1 && (
               <button type="button" onClick={() => handleRemoveItem(item.id)} className="btn-remove" style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "13px" }}>
@@ -131,7 +142,7 @@ function DiscountCalculator() {
             )}
           </div>
 
-          {/* Поле ввода цены */}
+        {/* Поле ввода цены */}
           <div className="field">
             <label htmlFor={`price-${item.id}`} className="field__label">
               Цена товара (₽)
@@ -146,6 +157,7 @@ function DiscountCalculator() {
               inputMode="decimal"
             />
           </div>
+
 
           {/* Выбор категории */}
           <div className="field">
@@ -175,6 +187,20 @@ function DiscountCalculator() {
       <button type="button" onClick={handleAddItem} className="btn btn--secondary" style={{ width: "100%", marginBottom: "16px" }}>
         + Добавить товар
       </button>
+
+      <div className="field">
+        <label htmlFor="promoCode" className="field__label">
+          Промокод
+        </label>
+        <input
+          id="promoCode"
+          type="text"
+          className="field__input"
+          value={promoCode}
+          onChange={handlePromoChange}
+          placeholder="Введите промокод"
+        />
+      </div>
 
       {/* Кнопки */}
       <div className="actions">
