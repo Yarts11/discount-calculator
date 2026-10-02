@@ -23,6 +23,8 @@ function DiscountCalculator() {
   const [customDiscount, setCustomDiscount] = useState(0);
   // Флаг: начислять ли НДС (true — с НДС, false — без НДС)
   const [withVat, setWithVat] = useState(true);
+  // История расчётов: последние 5 (новые — в начале массива)
+  const [history, setHistory] = useState([]);
   // Признак того, что пользователь нажал «Рассчитать»
   // До первого нажатия результаты не показываем
   const [calculated, setCalculated] = useState(false);
@@ -99,6 +101,17 @@ function DiscountCalculator() {
     // Валидация прошла — показываем результаты
     setError("");
     setCalculated(true);
+
+    // Сохраняем расчёт в историю (оставляем только последние 5)
+    const results = items.map(calcItem);
+    const entry = {
+      id: Date.now(),
+      itemsCount: items.length,
+      withVat,
+      initial: results.reduce((sum, r) => sum + r.numPrice, 0),
+      total: results.reduce((sum, r) => sum + r.total, 0),
+    };
+    setHistory([entry, ...history].slice(0, 5));
   }
 
   // Сброс формы
@@ -115,26 +128,28 @@ function DiscountCalculator() {
   const isPromoValid = promoCode.trim() === "WELCOME10";
   const promoDiscount = isPromoValid ? 10 : 0;
 
-  const calculatedItems = items.map(item => {
+  // Расчёт одной позиции (не зависит от флага calculated,
+  // поэтому его можно вызывать и в момент нажатия «Рассчитать»)
+  function calcItem(item) {
     const selectedCategory = CATEGORIES.find((c) => c.id === item.category);
     const numPrice = parseFloat(item.price) || 0;
     const categoryDiscountPercent = selectedCategory ? selectedCategory.discount : 0;
-    
+
     const baseDiscount = customDiscount > 0 ? customDiscount : categoryDiscountPercent;
     const discountPercent = baseDiscount + promoDiscount;
-    
-    const discountAmount = calculated ? numPrice * (discountPercent / 100) : 0;
-    const priceAfterDiscount = calculated ? numPrice - discountAmount : 0;
-    const vatAmount = calculated && withVat ? priceAfterDiscount * VAT_RATE : 0;
-    const total = calculated ? priceAfterDiscount + vatAmount : 0;
 
-    return {
-      numPrice,
-      discountAmount,
-      vatAmount,
-      total
-    };
-  });
+    const discountAmount = numPrice * (discountPercent / 100);
+    const priceAfterDiscount = numPrice - discountAmount;
+    const vatAmount = withVat ? priceAfterDiscount * VAT_RATE : 0;
+    const total = priceAfterDiscount + vatAmount;
+
+    return { numPrice, discountAmount, vatAmount, total };
+  }
+
+  // Результаты на экране показываем только после расчёта
+  const calculatedItems = calculated
+    ? items.map(calcItem)
+    : items.map(() => ({ numPrice: 0, discountAmount: 0, vatAmount: 0, total: 0 }));
 
   const totalInitialPrice = calculatedItems.reduce((sum, item) => sum + item.numPrice, 0);
   const totalDiscountAmount = calculatedItems.reduce((sum, item) => sum + item.discountAmount, 0);
@@ -301,6 +316,25 @@ function DiscountCalculator() {
                 <td>Итого к оплате</td>
                 <td className="results__value">{formatRub(finalTotal)} ₽</td>
               </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* История расчётов */}
+      {history.length > 0 && (
+        <div className="history" style={{ marginTop: "24px" }}>
+          <h3 className="results__title">История расчётов (последние 5)</h3>
+          <table className="results__table">
+            <tbody>
+              {history.map((h, i) => (
+                <tr key={h.id}>
+                  <td>
+                    #{history.length - i}: {h.itemsCount} шт., {h.withVat ? "с НДС" : "без НДС"}
+                  </td>
+                  <td className="results__value">{formatRub(h.total)} ₽</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
