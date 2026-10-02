@@ -20,6 +20,7 @@ function DiscountCalculator() {
     { id: Date.now(), price: "", category: "electronics" }
   ]);
   const [promoCode, setPromoCode] = useState("");
+  const [customDiscount, setCustomDiscount] = useState(0);
   // Признак того, что пользователь нажал «Рассчитать»
   // До первого нажатия результаты не показываем
   const [calculated, setCalculated] = useState(false);
@@ -39,13 +40,22 @@ function DiscountCalculator() {
   }
 
   // Изменение категории
-  function handleCategoryChange(id, catId) {
+  function handleCategoryChange(e) {
+    // Код метода обновлен для совместимости с кастомной скидкой
+  }
+
+  function handleItemCategoryChange(id, catId) {
     setItems(items.map(item => item.id === id ? { ...item, category: catId } : item));
-    setCalculated(false); // Категория изменилась — результаты устарели
+    setCalculated(false);
   }
 
   function handlePromoChange(e) {
     setPromoCode(e.target.value);
+    setCalculated(false);
+  }
+
+  function handleCustomDiscountChange(e) {
+    setCustomDiscount(parseInt(e.target.value, 10));
     setCalculated(false);
   }
 
@@ -87,6 +97,7 @@ function DiscountCalculator() {
   function handleReset() {
     setItems([{ id: Date.now(), price: "", category: "electronics" }]);
     setPromoCode("");
+    setCustomDiscount(0);
     setCalculated(false);
     setError("");
   }
@@ -99,7 +110,10 @@ function DiscountCalculator() {
     const selectedCategory = CATEGORIES.find((c) => c.id === item.category);
     const numPrice = parseFloat(item.price) || 0;
     const categoryDiscountPercent = selectedCategory ? selectedCategory.discount : 0;
-    const discountPercent = categoryDiscountPercent + promoDiscount;
+    
+    const baseDiscount = customDiscount > 0 ? customDiscount : categoryDiscountPercent;
+    const discountPercent = baseDiscount + promoDiscount;
+    
     const discountAmount = calculated ? numPrice * (discountPercent / 100) : 0;
     const priceAfterDiscount = calculated ? numPrice - discountAmount : 0;
     const vatAmount = calculated ? priceAfterDiscount * VAT_RATE : 0;
@@ -142,7 +156,7 @@ function DiscountCalculator() {
             )}
           </div>
 
-        {/* Поле ввода цены */}
+          {/* Поле ввода цены */}
           <div className="field">
             <label htmlFor={`price-${item.id}`} className="field__label">
               Цена товара (₽)
@@ -158,7 +172,6 @@ function DiscountCalculator() {
             />
           </div>
 
-
           {/* Выбор категории */}
           <div className="field">
             <label htmlFor={`category-${item.id}`} className="field__label">
@@ -168,7 +181,8 @@ function DiscountCalculator() {
               id={`category-${item.id}`}
               className="field__input field__select"
               value={item.category}
-              onChange={(e) => handleCategoryChange(item.id, e.target.value)}
+              onChange={(e) => handleItemCategoryChange(item.id, e.target.value)}
+              disabled={customDiscount > 0}
             >
               {/* Генерируем <option> из справочника категорий */}
               {CATEGORIES.map((cat) => (
@@ -187,6 +201,21 @@ function DiscountCalculator() {
       <button type="button" onClick={handleAddItem} className="btn btn--secondary" style={{ width: "100%", marginBottom: "16px" }}>
         + Добавить товар
       </button>
+
+      <div className="field">
+        <label htmlFor="customDiscount" className="field__label">
+          Кастомная скидка: {customDiscount}%
+        </label>
+        <input
+          id="customDiscount"
+          type="range"
+          min="0"
+          max="50"
+          value={customDiscount}
+          onChange={handleCustomDiscountChange}
+          style={{ width: "100%", cursor: "pointer" }}
+        />
+      </div>
 
       <div className="field">
         <label htmlFor="promoCode" className="field__label">
